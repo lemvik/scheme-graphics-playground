@@ -8,6 +8,7 @@
           c-string->string
           array-of-c-strings->list
           allocate-c-string
+          allocate-c-string-array
           with-allocated-pointer)
   (import (chezscheme)
           (rvector)
@@ -59,17 +60,34 @@
         (set! result (cons (c-string->string c-str) result)))))
 
   ;; Allocates a fresh C-string initialized with contents of argument-string.
+  ;; Returns an address of the allocated null-terminated string.
   (define (allocate-c-string scheme-string)
     (assert (string? scheme-string))
     (let* ([len (string-length scheme-string)]
-           [c-str (make-ftype-pointer c-string
-                                      (foreign-alloc (+ 1 len)))])
-      (ftype-set! c-string (len) c-str #\nul)
-      (format #t "~&Set null block")
-      (do ([i 0 (+ i 1)]
-           [ch (string-ref scheme-string 0) (string-ref scheme-string i)])
+           [size (* (foreign-sizeof 'char) (+ 1 len))]
+           [c-str (foreign-alloc size)])
+      (foreign-set! 'char c-str len #\nul)
+      (do ([i 0 (+ i 1)])
           ((>= i len) c-str)
-        (ftype-set! c-string (i) c-str ch))))
+        (let ([ch (string-ref scheme-string i)])
+          (foreign-set! 'char c-str i ch)))))
+
+  ;; Allocates an array of c-strings and returns ftype pointer to
+  ;; c-string datatype.
+  (define (allocate-c-string-array . strings)
+    (unless (null? strings)
+      (let* ([strings-count (length strings)]
+             [pointer (make-ftype-pointer c-string (foreign-alloc (* (ftype-sizeof c-string)
+                                                                     strings-count)))])
+        (let loop ([i 0]
+                   [str (allocate-c-string (car strings))]
+                   [rest (cdr strings)])
+          (ftype-set! c-string () pointer i (make-ftype-pointer char str))
+          (if (null? rest)
+              pointer
+              (loop (+ i 1)
+                    (allocate-c-string (car rest))
+                    (cdr rest)))))))
 
   ;; Simplify setting values for foreign-type.
   (define-syntax ftype-set-values!
