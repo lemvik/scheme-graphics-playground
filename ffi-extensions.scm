@@ -9,12 +9,17 @@
           array-of-c-strings->list
           allocate-c-string
           allocate-c-string-array
-          with-allocated-pointer)
+          with-allocated-pointer
+
+          with-native-strings
+
+          ftype-set-values!)
   (import (chezscheme)
           (rvector)
           (control-flow))
 
   ;; Pointer to an array of char.
+  ;; This definition is useful to refer to arrays of strings.
   (define-ftype c-string (* char))
 
   ;; Runs given action with allocated pointer and releases it using releaser
@@ -24,7 +29,7 @@
       (unwind-protect
        (action pointer)
        (releaser pointer))))
-      
+
   ;; Converts given c string into input port (that we can read data from).
   ;; So far it's a non-repositionable port.
   (define (create-c-string-input-port c-str)
@@ -88,6 +93,25 @@
               (loop (+ i 1)
                     (allocate-c-string (car rest))
                     (cdr rest)))))))
+
+  ;; Releases memory associated with given pointer to c-string array.
+  (define (release-c-string-array pointer number)
+    (let loop ([i 0])
+      (unless (>= i number)
+        (let ([next-pointer (ftype-&ref c-string () pointer i)])
+          (format #t "~&Releasing [address=~a][pointer-address=~a]~%" (ftype-pointer-address (ftype-ref c-string () next-pointer)) (ftype-pointer-address next-pointer))
+          (foreign-free (ftype-pointer-address (ftype-ref c-string () next-pointer)))
+          (loop (+ i 1))))))
+
+  ;; Runs action with two arguments - pointer to array of c-allocated strings
+  ;; and number of such strings.
+  ;; Releases memory associated with strings when control escapes action.
+  (define (with-native-strings action . strings)
+    (let* ([strings-count (length strings)]
+           [native-memory-pointer (apply allocate-c-string-array strings)])
+      (unwind-protect 
+       (action native-memory-pointer strings-count)
+       (release-c-string-array native-memory-pointer strings-count))))
 
   ;; Simplify setting values for foreign-type.
   (define-syntax ftype-set-values!

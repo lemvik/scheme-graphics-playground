@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 
-const char* const* get_strings(uint32_t *count) {
+extern const char* const* get_strings(uint32_t *count) {
   static const char* strings[] = {"string_1", "string_2"};
 
   *count = sizeof(strings) / sizeof(strings[0]);
@@ -9,7 +9,7 @@ const char* const* get_strings(uint32_t *count) {
   return strings;
 }
 
-uint32_t count_strings_chars(const char* strings[], uint32_t count) {
+extern uint32_t count_strings_chars(const char* const* strings, uint32_t count) {
   uint32_t result = 0;
 
   for (uint32_t i = 0; i < count; ++i) {
@@ -17,4 +17,13 @@ uint32_t count_strings_chars(const char* strings[], uint32_t count) {
   }
 
   return result;
+}
+
+struct chars_strings_holder {
+  const char* const* strings;
+  uint32_t count;
+};
+
+extern uint32_t count_strings(const struct chars_strings_holder* holder) {
+  return count_strings_chars(holder->strings, holder->count);
 }

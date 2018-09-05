@@ -53,16 +53,16 @@
       ([_ app-name app-version engine-name engine-version action]
        (with-allocated-pointer
         (lambda ()
-          (let ([name-c-string (allocate-c-string app-name)]
-                [engine-c-string (allocate-c-string engine-name)])
+          (let ([name-c-string (make-ftype-pointer char (allocate-c-string app-name))]
+                [engine-c-string (make-ftype-pointer char (allocate-c-string engine-name))])
             (create-application-info name-c-string app-version engine-c-string engine-version)))
         action
         (lambda (ptr)
           (let ([name-c-string (ftype-&ref vulkan-application-info (application-name) ptr)]
                 [engine-c-string (ftype-&ref vulkan-application-info (engine-name) ptr)])
-            (foreign-free name-c-string)
-            (foreign-free engine-c-string)
-            (foreign-free ptr)))))))
+            ;(foreign-free (ftype-pointer-address name-c-string))
+            ;(foreign-free (ftype-pointer-address engine-c-string))
+            (foreign-free (ftype-pointer-address ptr))))))))
 
   ;; Type of instance create info structure.
   (define +vulkan-structure-type-instance-create-info+ 1)
@@ -89,7 +89,7 @@
                          (flags 0)
                          (application-info app-info-ptr)
                          (enabled-layers-count 0)
-                         (enabled-layers-names 0)
+                         (enabled-layers-names (make-ftype-pointer c-string 0))
                          (enabled-extension-count extensions-count)
                          (enabled-extension-names extensions-names))
       create-info-ptr))
@@ -120,4 +120,5 @@
            (let ([instance-ptr 0])
              (vulkan-create-instance create-info-ptr 0 instance-ptr)
              instance-ptr))
-         foreign-free)))))
+         (lambda (ptr)
+           (foreign-free (ftype-pointer-address ptr))))))))
