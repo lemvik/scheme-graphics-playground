@@ -8,19 +8,38 @@
 
 (library (vulkan)
   (export extensions-count
-          create-instance)
+          create-instance
+
+          make-version
+          make-application-info
+          make-create-instance-info)
   (import (chezscheme)
           (ffi-extensions)
           (control-flow))
 
   ;; Defines version of vulkan API to use (per docs)
-  (define (vulkan-make-version major minor patch)
+  (define (make-version major minor patch)
     (bitwise-ior (bitwise-arithmetic-shift-left major 22)
                  (bitwise-arithmetic-shift-left minor 12)
                  patch))
 
   ;; Type of application info from Vulkan API.
   (define +vulkan-structure-type-application-info+ 0)
+
+  ;; Scheme-side application info.
+  (define-record-type application-info
+    (fields (immutable app-name)
+            (immutable app-version)
+            (immutable engine-name)
+            (immutable engine-version)
+            (immutable api-version)))
+
+  ;; Scheme-side instance creation info.
+  (define-record-type create-instance-info
+    (fields (immutable flags)
+            (immutable app-info)
+            (immutable layers)
+            (immutable extensions)))
 
   ;; Structure of application info.
   (define-ftype vulkan-application-info
@@ -33,6 +52,29 @@
       [engine-version unsigned-32]
       [api-version unsigned-32]))
 
+  ;; Structure of instance create info.
+  (define-ftype vulkan-instance-create-info
+    (struct
+      [structure-type int]
+      [next-structure uptr]
+      [flags int]
+      [application-info (* vulkan-application-info)]
+      [enabled-layers-count int]
+      [enabled-layers-names (* c-string)]
+      [enabled-extension-count int]
+      [enabled-extension-names (* c-string)]))
+
+  ;; Runs a chunk of code with memory allocated for external consumption
+  ;; that holds the create instance info.
+  (define (with-allocated-create-instance-info create-info action)
+    (let ([app-info (create-instance-info-app-info create-info)])
+      (with-allocated-app-info app-info
+                               (lambda (app-info-pointer)
+                                 (let ([pointer (make-ftype-pointer vulkan-instance-create-info
+                                                                    (foreign-alloc (ftype-sizeof vulkan-instance-create-info)))])
+                                   (doc
+
+  
   ;; Allocates application info for
   (define (create-application-info app-name app-version engine-name engine-version)
     (let ([app-info-ptr (make-ftype-pointer vulkan-application-info
@@ -44,7 +86,7 @@
                          (application-version app-version)
                          (engine-name engine-name)
                          (engine-version engine-version)
-                         (api-version (vulkan-make-version 1 1 0)))
+                         (api-version (make-version 1 1 0)))
       app-info-ptr))
 
   ;; Runs action with given application info.
@@ -67,17 +109,6 @@
   ;; Type of instance create info structure.
   (define +vulkan-structure-type-instance-create-info+ 1)
 
-  ;; Structure of instance create info.
-  (define-ftype vulkan-instance-create-info
-    (struct
-      [structure-type int]
-      [next-structure uptr]
-      [flags int]
-      [application-info (* vulkan-application-info)]
-      [enabled-layers-count int]
-      [enabled-layers-names (* c-string)]
-      [enabled-extension-count int]
-      [enabled-extension-names (* c-string)]))
 
   ;; Create instance info.
   (define (create-instance-create-info app-info-ptr extensions-count extensions-names)
