@@ -10,9 +10,8 @@
           allocate-c-string
           allocate-c-string-array
           with-allocated-pointer
-
           with-native-strings
-
+          with-pointers
           ftype-set-values!)
   (import (chezscheme)
           (rvector)
@@ -112,6 +111,18 @@
       (unwind-protect 
        (action native-memory-pointer strings-count)
        (release-c-string-array native-memory-pointer strings-count))))
+
+  ;; Runs given forms with pointers allocated by given
+  ;; expressions, releasing them upon return from the form.
+  (define-syntax with-pointers
+    (syntax-rules ()
+      ([_ () b1 b2 ...]
+       (begin b1 b2 ...))
+      ([_ ([p1 e1] [p2 e2] ...) b1 b2 ...]
+       (let ([p1 e1])
+         (unwind-protect
+          (with-pointers ([p2 e2] ...) b1 b2 ...)
+          (foreign-free (ftype-pointer-address p1)))))))
 
   ;; Simplify setting values for foreign-type.
   (define-syntax ftype-set-values!
