@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 
-extern const char* const* get_strings(uint32_t *count) {
+extern const char** get_strings(uint32_t *count) {
   static const char* strings[] = {"string_1", "string_2"};
 
   *count = sizeof(strings) / sizeof(strings[0]);
