@@ -50,11 +50,10 @@
   (define (scheme-string->c-string scheme-string)
     (assert (string? scheme-string))
     (let* ([bt (string->bytevector scheme-string (current-transcoder))]
-           [sl (1+ (bytevector-length bt))]
-           [rp (foreign-allocate char sl)]
-           [up (foreign-transmute-pointer rp unsigned-8)])
-      (ftype-set! unsigned-8 () up sl 0)
-      (write-scheme-string-to-byte-buffer! scheme-string up (1- sl))
+           [sl (bytevector-length bt)]
+           [rp (foreign-allocate unsigned-8 (1+ sl))])
+      (ftype-set! unsigned-8 () rp sl 0)
+      (write-scheme-string-to-byte-buffer! scheme-string rp sl)
       rp))
 
   ;; Converts a list of scheme strings into C array of pointers to char (char**) and number of those strings.
