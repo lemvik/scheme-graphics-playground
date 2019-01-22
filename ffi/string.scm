@@ -34,16 +34,8 @@
     (do ([i 0 (+ i 1)]
          [result (list)])
         ((= i c-strings-count) (reverse! result))
-      (let ([c-str (ftype-&ref c-string () c-strings-array i)])
+      (let ([c-str (ftype-ref c-string () c-strings-array i)])
         (set! result (cons (c-string->scheme-string c-str) result)))))
-
-  ;; Writes scheme string into given byte-buffer.
-  (define (write-scheme-string-to-byte-buffer! scheme-string byte-buffer byte-buffer-size)
-    (let ([bytes (string->bytevector scheme-string (current-transcoder))])
-      (assert (<= (bytevector-length bytes) byte-buffer-size))
-      (call-with-port (create-c-buffer-output-port byte-buffer byte-buffer-size)
-                      (lambda (port)
-                        (put-bytevector port bytes)))))
 
   ;; Allocates a C string and copies contents of the scheme string there. Returns
   ;; pointer to a null-terminated C string.
@@ -51,9 +43,11 @@
     (assert (string? scheme-string))
     (let* ([bt (string->bytevector scheme-string (current-transcoder))]
            [sl (bytevector-length bt)]
-           [rp (foreign-allocate unsigned-8 (1+ sl))])
-      (ftype-set! unsigned-8 () rp sl 0)
-      (write-scheme-string-to-byte-buffer! scheme-string rp sl)
+           [rp (foreign-allocate char (1+ sl))])
+      (ftype-set! char () rp sl #\nul)
+      (call-with-port (create-c-buffer-output-port (foreign-transmute-pointer rp unsigned-8) sl)
+                      (lambda (port)
+                        (put-bytevector port bt)))
       rp))
 
   ;; Converts a list of scheme strings into C array of pointers to char (char**) and number of those strings.
