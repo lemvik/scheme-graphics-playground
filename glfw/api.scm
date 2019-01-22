@@ -11,20 +11,21 @@
   (import (chezscheme)
           (ffi-extensions)
           (control-flow)
-          (add-prefix (glfw raw) "glfw-raw:"))
+          (prefix (glfw raw) glfw-raw:))
 
   ;; Creates a glfw window and runs given functions in it.
   ;; on-init is run just before the main loop starts and is given window pointer.
   ;; frame-update is run on each frame update and is given no arguments.
   (define (with-window width height title on-init frame-update)
-    (unless (glfw-raw:init)
+    (unless (glfw-raw:initialize)
       (error 'with-glfw-window "Failed to initialize GLFW." #f))
-    (glfw-raw:window-hint glfw-raw:client-api
+    (glfw-raw:window-hint glfw-raw:client-api-hint
                           glfw-raw:no-api)
     (let ([window-ptr (glfw-raw:create-window width height title 0 0)])
       (on-init window-ptr)
       (until (glfw-raw:window-should-close window-ptr)
-        (glfw-raw:poll-events))
+        (glfw-raw:poll-events)
+        (frame-update window-ptr))
       (glfw-raw:destroy-window window-ptr))
     (glfw-raw:terminate))
 

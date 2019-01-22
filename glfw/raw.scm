@@ -8,14 +8,19 @@
 ; (load-shared-object "libglfw.so")
 
 (library (glfw raw)
-  (export glfw-init
-          glfw-terminate
-          glfw-window-hint
-          glfw-create-window
-          glfw-destroy-window
-          glfw-window-should-close
-          glfw-poll-events
-          glfw-get-required-instance-extensions)
+  (export initialize
+          terminate
+          window-hint
+          create-window
+          destroy-window
+          window-should-close
+          poll-events
+          get-required-vulkan-instance-extensions
+
+          client-api-hint
+          opengl-api
+          opengl-es-api
+          no-api)
 
   (import (chezscheme)
           (ffi-extensions))
