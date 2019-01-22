@@ -6,6 +6,8 @@
   (export enumerate-instance-extension-properties
           create-instance
 
+          make-version
+
           make-application-info
           free-application-info
 
@@ -26,6 +28,13 @@
   ;; This is definitions from VkStructureType enumeration in vulkan_core.h
   (define application-info-structure-type 0)
   (define instance-create-info-structure-type 1)
+
+  ;; Create integer representing version according to Vulkan's rules.
+  ;; Essentially a VK_MAKE_VERSION macro replica.
+  (define (make-version major minor patch)
+    (bitwise-ior (bitwise-arithmetic-shift-left major 22)
+                 (bitwise-arithmetic-shift-left minor 12)
+                 patch))
 
   ;; Structure VkApplicationInfo from vulkan headers.
   (define-ftype application-info
