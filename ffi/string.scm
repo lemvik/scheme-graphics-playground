@@ -69,6 +69,6 @@
   ;; Releases array of C strings.
   (define (release-c-strings c-strings-pointer c-strings-count)
     (do ([i 0 (1+ i)])
-        ((>= i c-strings-count) (foreign-free c-strings-pointer))
+        ((>= i c-strings-count) (foreign-free (ftype-pointer-address c-strings-pointer)))
       (let ([str-pointer (ftype-ref c-string () c-strings-pointer i)])
-        (foreign-free str-pointer)))))
+        (foreign-free (ftype-pointer-address str-pointer))))))
