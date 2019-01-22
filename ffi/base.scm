@@ -8,6 +8,8 @@
   (export foreign-allocate
           foreign-transmute-pointer
 
+          ftype-set-values!
+
           create-c-buffer-input-port
           create-c-buffer-output-port)
   (import (chezscheme)
@@ -75,4 +77,11 @@
                          (bytevector-u8-ref bv (+ st i))))))
        #f
        #f
-       #f))))
+       #f)))
+
+  ;; Simplify setting values for foreign-type.
+  (define-syntax ftype-set-values!
+    (syntax-rules ()
+      ([_ type-descriptor pointer (name value) ...]
+       (begin (ftype-set! type-descriptor (name) pointer value)
+              ...)))))

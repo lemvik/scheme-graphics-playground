@@ -10,7 +10,7 @@ DEPS := $(OBJS:.o=.d)
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-CFLAGS  := $(CFLAGS) -fPIC
+CFLAGS  := $(CFLAGS) -fPIC -MMD -MP
 LDFLAGS := $(LDFLAGS) -shared -fPIC 
 
 $(BUILD_DIR)/$(TARGET_NAME): $(OBJS)
