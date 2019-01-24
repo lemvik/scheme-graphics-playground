@@ -23,7 +23,7 @@
           no-api)
 
   (import (chezscheme)
-          (ffi-extensions))
+          (prefix (ffi string) ffi:))
 
   ;; Initialize GLFW, needs to be called before any other function.
   (define initialize (foreign-procedure "glfwInit" () boolean))
@@ -57,7 +57,7 @@
   (define get-required-vulkan-instance-extensions
     (foreign-procedure "glfwGetRequiredInstanceExtensions"
                        (u32*)
-                       (* c-string)))
+                       (* ffi:c-string)))
 
   ;;; Hints to use.
 

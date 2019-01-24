@@ -2,16 +2,14 @@
 ;;;; Scheme API wrapper around GLFW3 library.
 ;;;;
 
-
 (library (glfw api)
   (export with-window
-          query-enabled-extensions
-          raw-enabled-extensions)
+          query-enabled-extensions)
 
   (import (chezscheme)
-          (ffi-extensions)
           (control-flow)
-          (prefix (glfw raw) glfw-raw:))
+          (prefix (glfw raw) glfw-raw:)
+          (prefix (ffi string) ffi:))
 
   ;; Creates a glfw window and runs given functions in it.
   ;; on-init is run just before the main loop starts and is given window pointer.
@@ -31,14 +29,10 @@
 
   ;; Returns a list of enabled instance extensions for Vulkan.
   (define (query-enabled-extensions)
-    (let-values (([num strings] (raw-enabled-extensions)))
-      (array-of-c-strings->list strings num)))
-
-  ;; Returns values consisting of number of extensions and their name in FFI format.
-  (define (raw-enabled-extensions)
     (let ([ref-container (make-bytevector 4 0)])
       (let ([extensions-strings (glfw-raw:get-required-vulkan-instance-extensions
                                  ref-container)])
-        (let ([number-of-extensions (bytevector-u32-native-ref ref-container 0)])
-          (values number-of-extensions
-                  extensions-strings))))))
+        (if (ftype-pointer-null? extensions-strings)
+            (list)
+            (let ([number-of-extensions (bytevector-u32-native-ref ref-container 0)])
+              (ffi:c-strings->scheme-strings extensions-strings number-of-extensions)))))))
