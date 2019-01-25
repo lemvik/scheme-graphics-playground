@@ -53,7 +53,7 @@
   ;; Converts a list of scheme strings into C array of pointers to char (char**) and number of those strings.
   (define (scheme-strings->c-strings scheme-strings)
     (if (null? scheme-strings)
-        (values 0 0)
+        (values (make-ftype-pointer c-string 0) 0)
         (let* ([strings-number (length scheme-strings)]
                [result-pointer (foreign-allocate c-string strings-number)])
           (let loop ([i 0]

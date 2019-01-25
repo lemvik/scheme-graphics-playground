@@ -3,8 +3,9 @@
 ;;;;
 
 (library (vulkan raw)
-  (export enumerate-instance-extension-properties
-          create-instance
+  (export create-instance
+
+          instance
 
           make-version
 
@@ -12,22 +13,21 @@
           free-application-info
 
           make-instance-create-info
-          free-instance-create-info)
+          free-instance-create-info
+
+          success-code
+
+          api-version)
   (import (chezscheme)
           (prefix (ffi base)   ffi:)
           (prefix (ffi string) ffi:))
 
-  ;; Returns number of available instance extensions.
-  (define enumerate-instance-extension-properties
-    (foreign-procedure "vkEnumerateInstanceExtensionProperties" (string u32* uptr) int))
+  ;; Instance is a opaque pointer.
+  (define-ftype instance uptr)
 
   ;; Creates Vulkan instance and returns success code.
   (define create-instance
-    (foreign-procedure "vkCreateInstance" ((* instance-create-info) uptr uptr) int))
-
-  ;; This is definitions from VkStructureType enumeration in vulkan_core.h
-  (define application-info-structure-type 0)
-  (define instance-create-info-structure-type 1)
+    (foreign-procedure "vkCreateInstance" ((* instance-create-info) uptr (* instance)) int))
 
   ;; Create integer representing version according to Vulkan's rules.
   ;; Essentially a VK_MAKE_VERSION macro replica.
@@ -35,6 +35,16 @@
     (bitwise-ior (bitwise-arithmetic-shift-left major 22)
                  (bitwise-arithmetic-shift-left minor 12)
                  patch))
+
+  ;; Returns codes from Vulkan.
+  (define success-code 0)
+
+  ;; API version (stolen from vulkan_core.h on my machine).
+  (define api-version (make-version 1 0 0))
+
+  ;; This is definitions from VkStructureType enumeration in vulkan_core.h
+  (define application-info-structure-type 0)
+  (define instance-create-info-structure-type 1)
 
   ;; Structure VkApplicationInfo from vulkan headers.
   (define-ftype application-info

@@ -4,12 +4,14 @@
 
 (top-level-program
  (import (chezscheme)
-         (prefix (glfw api) glfw:))
+         (prefix (glfw api) glfw:)
+         (prefix (vulkan api) vulkan:))
 
  (define (on-init window-ptr)
    (let ([required-extensions (glfw:query-enabled-extensions)])
-     (format #t "~&Required extensions: ~a~%" required-extensions))
-   (flush-output-port))
+     (let ([vulkan-result (vulkan:create-instance "Scheme-Vulkan" "No Engine" required-extensions (vulkan:make-version 1 0 0))])
+       (format #t "~&Required extensions: ~a~%Vulkan initialized: ~a~%" required-extensions vulkan-result))
+   (flush-output-port)))
 
  (define (frame-update window-ptr)
    #f)
