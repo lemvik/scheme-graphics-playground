@@ -14,7 +14,7 @@
   ;; Creates a glfw window and runs given functions in it.
   ;; on-init is run just before the main loop starts and is given window pointer.
   ;; frame-update is run on each frame update and is given no arguments.
-  (define (with-window width height title on-init frame-update)
+  (define (with-window width height title on-init on-destroy frame-update)
     (unless (glfw-raw:initialize)
       (error 'with-glfw-window "Failed to initialize GLFW." #f))
     (glfw-raw:window-hint glfw-raw:client-api-hint
@@ -24,6 +24,7 @@
       (until (glfw-raw:window-should-close window-ptr)
         (glfw-raw:poll-events)
         (frame-update window-ptr))
+      (on-destroy window-ptr)
       (glfw-raw:destroy-window window-ptr))
     (glfw-raw:terminate))
 

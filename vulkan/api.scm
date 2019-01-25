@@ -4,12 +4,17 @@
 
 (library (vulkan api)
   (export create-instance
+          destroy-instance
           make-version)
   (import (chezscheme)
           (prefix (vulkan raw) vulkan-raw:))
 
   ;; Re-export version creation routine.
   (define make-version vulkan-raw:make-version)
+
+  ;; Destroys Vulkan instance.
+  (define (destroy-instance instance-ptr)
+    (vulkan-raw:destroy-instance instance-ptr 0))
 
   ;; Creates vulkan instance and returns numeric value of the pointer to the instance.
   (define (create-instance app-name engine-name extensions version)

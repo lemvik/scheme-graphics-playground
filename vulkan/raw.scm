@@ -4,7 +4,7 @@
 
 (library (vulkan raw)
   (export create-instance
-
+          destroy-instance
           instance
 
           make-version
@@ -28,6 +28,10 @@
   ;; Creates Vulkan instance and returns success code.
   (define create-instance
     (foreign-procedure "vkCreateInstance" ((* instance-create-info) uptr (* instance)) int))
+
+  ;; Destroys Vulkan instance and returns success code.
+  (define destroy-instance
+    (foreign-procedure "vkDestroyInstance" ((& instance) uptr) int))
 
   ;; Create integer representing version according to Vulkan's rules.
   ;; Essentially a VK_MAKE_VERSION macro replica.
