@@ -38,6 +38,10 @@
   ;; Instance is a opaque pointer.
   (define-ftype instance uptr)
 
+  ;; Instance procedures lookup procedure.
+  (define get-instance-proc-address
+    (foreign-procedure "vkGetInstanceProcAddr" ((& instance) string) uptr))
+
   ;; Creates Vulkan instance and returns success code.
   (define create-instance
     (foreign-procedure "vkCreateInstance" ((* instance-create-info) uptr (* instance)) int))
@@ -46,13 +50,15 @@
   (define destroy-instance
     (foreign-procedure "vkDestroyInstance" ((& instance) uptr) int))
 
-  ;; Creates debug messenger for Vulkan.
-  (define create-debug-messenger
-    (foreign-procedure "vkCreateDebugUtilsMessengerEXT" ((& instance) (* debug-messenger-create-info) uptr (* debug-messenger)) int))
+  ;; Looks up address of vkCreateDebugUtilsMessengerEXT procedure in given instance.
+  (define (lookup-create-debug-messenger inst)
+    (let ([proc-address (get-instance-proc-address inst "vkCreateDebugUtilsMessengerEXT")])
+      (foreign-procedure proc-address ((& instance) (* debug-messenger-create-info) uptr (* debug-messenger)) int)))
 
-  ;; Destroys debug messenger for Vulkan.
-  (define destroy-debug-messenger
-    (foreign-procedure "vkDestroyDebugUtilsMessengerEXT" ((& instance) (& debug-messenger) uptr) int))
+  ;; Looks up address of vkDestroyDebugUtilsMessengerEXT procedure in given instance.
+  (define (lookup-destroy-debug-messenger inst)
+    (let ([proc-address (get-instance-proc-address inst "vkDestroyDebugUtilsMessengerEXT")])
+      (foreign-procedure proc-address ((& instance) (& debug-messenger) uptr) int)))
 
   ;; Create integer representing version according to Vulkan's rules.
   ;; Essentially a VK_MAKE_VERSION macro replica.
@@ -191,16 +197,17 @@
       (let ([message (ffi:c-string->scheme-string (ftype-ref debug-messenger-callback-data (message) callback-data))])
         (logger severity type message)))
 
-    (let ([create-structure (ffi:foreign-allocate debug-messenger-create-info)]
-          [messenger (ffi:foreign-allocate debug-messenger)])
-      (lock-object callback)
-      (ffi:ftype-set-values! debug-messenger-create-info create-structure
-                             [structure-type create-debug-messenger-structure-type]
-                             [next-structure 0]
-                             [flags 0]
-                             [message-severity severity-mask]
-                             [message-type type-mask]
-                             [callback callback]
-                             [user-data 0])
-      (create-debug-messenger inst create-structure 0 messenger)
-      (values messenger callback))))
+    (let ([create-debug-messenger (lookup-create-debug-messenger inst)])
+      (let ([create-structure (ffi:foreign-allocate debug-messenger-create-info)]
+            [messenger (ffi:foreign-allocate debug-messenger)])
+        (lock-object callback)
+        (ffi:ftype-set-values! debug-messenger-create-info create-structure
+                               [structure-type create-debug-messenger-structure-type]
+                               [next-structure 0]
+                               [flags 0]
+                               [message-severity severity-mask]
+                               [message-type type-mask]
+                               [callback callback]
+                               [user-data 0])
+        (create-debug-messenger inst create-structure 0 messenger)
+        (values messenger callback)))))

@@ -20,8 +20,8 @@
      (let ([vulkan-result (vulkan:create-instance "Scheme-Vulkan" "No Engine" vulkan-layers required-extensions (vulkan:make-version 1 0 0))])
        (when vulkan-result
          (set! vulkan-instance vulkan-result))
-       (let-values ([(vulkan-messenger callback) (vulkan:make-debug-messenger #x1111 #x7 (lambda (sev type mes)
-                                                                                           (format #t "~&Severity: ~a, type: ~a, message: ~a~%" sev type mes)))])
+       (let-values ([(vulkan-messenger callback) (vulkan:make-debug-messenger vulkan-result #x1111 #x7 (lambda (sev type mes)
+                                                                                                         (format #t "~&Severity: ~a, type: ~a, message: ~a~%" sev type mes)))])
          (format #t "~&Required extensions: ~a~%Vulkan initialized: ~aMessenger initialized:~a~%" required-extensions vulkan-result vulkan-messenger)))
    (flush-output-port)))
 
