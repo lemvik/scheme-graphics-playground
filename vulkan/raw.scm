@@ -9,6 +9,19 @@
 
           make-version
 
+          message-severity-verbose
+          message-severity-info
+          message-severity-warning
+          message-severity-error
+          message-type-general
+          message-type-validation
+          message-type-performance
+
+          debug-messenger-create-info
+          debug-messenger-callback-data
+          debug-messenger
+          make-debug-messenger
+
           make-application-info
           free-application-info
 
@@ -33,6 +46,14 @@
   (define destroy-instance
     (foreign-procedure "vkDestroyInstance" ((& instance) uptr) int))
 
+  ;; Creates debug messenger for Vulkan.
+  (define create-debug-messenger
+    (foreign-procedure "vkCreateDebugUtilsMessengerEXT" ((& instance) (* debug-messenger-create-info) uptr (* debug-messenger)) int))
+
+  ;; Destroys debug messenger for Vulkan.
+  (define destroy-debug-messenger
+    (foreign-procedure "vkDestroyDebugUtilsMessengerEXT" ((& instance) (& debug-messenger) uptr) int))
+
   ;; Create integer representing version according to Vulkan's rules.
   ;; Essentially a VK_MAKE_VERSION macro replica.
   (define (make-version major minor patch)
@@ -49,10 +70,11 @@
   ;; This is definitions from VkStructureType enumeration in vulkan_core.h
   (define application-info-structure-type 0)
   (define instance-create-info-structure-type 1)
+  (define create-debug-messenger-structure-type 1000128004)
 
   ;; Structure VkApplicationInfo from vulkan headers.
   (define-ftype application-info
-    (struct 
+    (struct
       [structure-type int]
       [next-structure uptr]
       [application-name ffi:c-string]
@@ -86,7 +108,7 @@
 
   ;; Structure VkInstanceCreateInfo from vulkan headers.
   (define-ftype instance-create-info
-    (struct 
+    (struct
       [structure-type int]
       [next-structure uptr]
       [instance-create-flags unsigned-32]
@@ -120,4 +142,65 @@
           [exts-c-strings (ftype-ref instance-create-info (extensions-names) instance-info-ptr)])
       (ffi:release-c-strings layers-c-strings layers-count)
       (ffi:release-c-strings exts-c-strings exts-count)
-      (foreign-free (ftype-pointer-address instance-info-ptr)))))
+      (foreign-free (ftype-pointer-address instance-info-ptr))))
+
+  ;; Messages severity.
+  (define message-severity-verbose #x1)
+  (define message-severity-info    #x10)
+  (define message-severity-warning #x100)
+  (define message-severity-error   #x1000)
+
+  ;; Message types.
+  (define message-type-general     #x1)
+  (define message-type-validation  #x2)
+  (define message-type-performance #x4)
+
+  ;; Callback data for debug messenger.
+  (define-ftype debug-messenger-callback-data
+    (struct
+      [structure-type int]
+      [next-structure int]
+      [flats int]
+      [message-id-name (* char)]
+      [message-id-number integer-32]
+      [message (* char)]
+      [queue-labels-count unsigned-32]
+      [queue-labels uptr]
+      [buf-labels-count unsigned-32]
+      [buf-labels uptr]
+      [objects-count unsigned-32]
+      [objects uptr]))
+
+  ;; Structure describing desired debug messenger structure.
+  (define-ftype debug-messenger-create-info
+    (struct
+      [structure-type int]
+      [next-structure uptr]
+      [flags int]
+      [message-severity int]
+      [message-type int]
+      [callback (* (function (int int (* debug-messenger-callback-data) uptr) boolean))]
+      [user-data uptr]))
+
+  ;; Opaque pointer for debug messenger.
+  (define-ftype debug-messenger uptr)
+
+  ;; Creates debug messenger for Vulkan.
+  (define (make-debug-messenger inst severity-mask type-mask logger)
+    (define (callback severity type callback-data ignored)
+      (let ([message (ffi:c-string->scheme-string (ftype-ref debug-messenger-callback-data (message) callback-data))])
+        (logger severity type message)))
+
+    (let ([create-structure (ffi:foreign-allocate debug-messenger-create-info)]
+          [messenger (ffi:foreign-allocate debug-messenger)])
+      (lock-object callback)
+      (ffi:ftype-set-values! debug-messenger-create-info create-structure
+                             [structure-type create-debug-messenger-structure-type]
+                             [next-structure 0]
+                             [flags 0]
+                             [message-severity severity-mask]
+                             [message-type type-mask]
+                             [callback callback]
+                             [user-data 0])
+      (create-debug-messenger inst create-structure 0 messenger)
+      (values messenger callback))))
