@@ -7,13 +7,15 @@
 (library (ffi base)
   (export foreign-allocate
           foreign-transmute-pointer
+          with-foreign-allocated
 
           ftype-set-values!
 
           create-c-buffer-input-port
           create-c-buffer-output-port)
   (import (chezscheme)
-          (utils))
+          (utils)
+          (control-flow))
 
   ;; Auxiliary syntax to simplify array allocation.
   ;; Returns foreign pointer of specified type pointing to space sufficient to
@@ -23,9 +25,19 @@
       ([_ type]
        (foreign-allocate type 1))
       ([_ type count]
-       (make-ftype-pointer type
-                           (foreign-alloc (* (ftype-sizeof type)
-                                             count))))))
+       (make-ftype-pointer type (foreign-alloc (* (ftype-sizeof type) count))))))
+
+  ;; Runs action giving it a pointer to a foreign allocated memory of type
+  ;; Releases memory after the action completes.
+  (define-syntax with-foreign-allocated
+    (syntax-rules ()
+      ([_ type action]
+       (with-foreign-allocated type 1 action))
+      ([_ type count action]
+       (let ([allocated-ptr (foreign-allocate type count)])
+         (unwind-protect (action allocated-ptr)
+                         (foreign-free (ftype-pointer-address allocated-ptr)))))))
+    
 
   ;; Returns new ftype pointer pointing to the same address but having different type.
   ;; Equivalent of a cast in C.

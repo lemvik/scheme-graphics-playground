@@ -5,7 +5,7 @@
 #!chezscheme
 
 ;;; This line is required to use glfw raw.
-; (load-shared-object "libglfw.so")
+                                        ; (load-shared-object "libglfw.so")
 
 (library (glfw raw)
   (export initialize
@@ -17,13 +17,30 @@
           poll-events
           get-required-vulkan-instance-extensions
 
+          get-error
+          set-error-callback
+
           client-api-hint
           opengl-api
           opengl-es-api
           no-api)
 
   (import (chezscheme)
+          (prefix (ffi base) ffi:)
           (prefix (ffi string) ffi:))
+
+  ;; Sets an error callback that will be invoked with error code and description each time there is an error.
+  (define set-error-callback (foreign-procedure "glfwSetErrorCallback" (uptr) void))
+
+  ;; Returns most recent error code and description fo an error.
+  (define get-error-native (foreign-procedure "glfwGetError" ((* ffi:c-string)) int))
+
+  ;; Returns latest glfw error.
+  (define (get-error)
+    (ffi:with-pointer-to-c-string (lambda (description-ptr)
+                                    (let ([error-code (get-error-native description-ptr)])
+                                      (let ([strings (ffi:c-strings->scheme-strings description-ptr 1)])
+                                        (values error-code (car strings)))))))
 
   ;; Initialize GLFW, needs to be called before any other function.
   (define initialize (foreign-procedure "glfwInit" () boolean))
@@ -46,8 +63,8 @@
 
   ;; Returns true if given GLFW window should be closed.
   (define window-should-close (foreign-procedure "glfwWindowShouldClose"
-                                                      (uptr)
-                                                      boolean))
+                                                 (uptr)
+                                                 boolean))
 
   ;; Polls window events.
   (define poll-events (foreign-procedure "glfwPollEvents" () void))
@@ -70,4 +87,3 @@
   (define opengl-es-api #x00030002)
   ;; No particular API to use (needed when Vulkan is used).
   (define no-api 0))
-

@@ -13,19 +13,21 @@
           scheme-string->c-string
           scheme-strings->c-strings
 
-          release-c-strings)
+          release-c-strings
+
+          with-pointer-to-c-string)
 
   (import (chezscheme)
-          (ffi base)
+          (prefix (ffi base) ffi:)
           (utils))
 
   ;; Pointer to an array of C characters.
-  ;; Since we can't define pointer to
+  ;; Since we can't define pointer to pointer otherwise.
   (define-ftype c-string (* char))
 
   ;; Copies given C string into Scheme string using (current-transcoder) parameter.
   (define (c-string->scheme-string c-str)
-    (call-with-port (create-c-buffer-input-port (foreign-transmute-pointer c-str unsigned-8))
+    (call-with-port (ffi:create-c-buffer-input-port (ffi:foreign-transmute-pointer c-str unsigned-8))
                     (lambda (port)
                       (bytevector->string (get-bytevector-all port) (current-transcoder)))))
 
@@ -43,9 +45,9 @@
     (assert (string? scheme-string))
     (let* ([bt (string->bytevector scheme-string (current-transcoder))]
            [sl (bytevector-length bt)]
-           [rp (foreign-allocate char (1+ sl))])
+           [rp (ffi:foreign-allocate char (1+ sl))])
       (ftype-set! char () rp sl #\nul)
-      (call-with-port (create-c-buffer-output-port (foreign-transmute-pointer rp unsigned-8) sl)
+      (call-with-port (ffi:create-c-buffer-output-port (ffi:foreign-transmute-pointer rp unsigned-8) sl)
                       (lambda (port)
                         (put-bytevector port bt)))
       rp))
@@ -55,7 +57,7 @@
     (if (null? scheme-strings)
         (values (make-ftype-pointer c-string 0) 0)
         (let* ([strings-number (length scheme-strings)]
-               [result-pointer (foreign-allocate c-string strings-number)])
+               [result-pointer (ffi:foreign-allocate c-string strings-number)])
           (let loop ([i 0]
                      [str (scheme-string->c-string (car scheme-strings))]
                      [rest (cdr scheme-strings)])
@@ -71,4 +73,9 @@
     (do ([i 0 (1+ i)])
         ((>= i c-strings-count) (foreign-free (ftype-pointer-address c-strings-pointer)))
       (let ([str-pointer (ftype-ref c-string () c-strings-pointer i)])
-        (foreign-free (ftype-pointer-address str-pointer))))))
+        (foreign-free (ftype-pointer-address str-pointer)))))
+
+  ;; Calls action giving it pointer to a C null-terminated string.
+  (define (with-pointer-to-c-string action)
+    (ffi:with-foreign-allocated c-string action)))
+    

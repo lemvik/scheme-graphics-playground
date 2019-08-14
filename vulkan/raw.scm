@@ -177,6 +177,10 @@
       [objects-count unsigned-32]
       [objects uptr]))
 
+  ;; Type of debugging callback for Vulkan.
+  (define-ftype debug-callback-type
+    (function (int int (* debug-messenger-callback-data) uptr) boolean))
+
   ;; Structure describing desired debug messenger structure.
   (define-ftype debug-messenger-create-info
     (struct
@@ -185,7 +189,7 @@
       [flags int]
       [message-severity int]
       [message-type int]
-      [callback (* (function (int int (* debug-messenger-callback-data) uptr) boolean))]
+      [callback (* debug-callback-type)]
       [user-data uptr]))
 
   ;; Opaque pointer for debug messenger.
@@ -197,17 +201,22 @@
       (let ([message (ffi:c-string->scheme-string (ftype-ref debug-messenger-callback-data (message) callback-data))])
         (logger severity type message)))
 
-    (let ([create-debug-messenger (lookup-create-debug-messenger inst)])
+    (let ([create-debug-messenger (lookup-create-debug-messenger inst)]
+          [callable (foreign-callable callback
+                                      (integer-32 integer-32 (* debug-messenger-callback-data) uptr)
+                                      boolean)])
+      (lock-object callable)
       (let ([create-structure (ffi:foreign-allocate debug-messenger-create-info)]
-            [messenger (ffi:foreign-allocate debug-messenger)])
-        (lock-object callback)
+            [messenger (ffi:foreign-allocate debug-messenger)]
+            [callable-pointer (make-ftype-pointer debug-callback-type (foreign-callable-entry-point callable))])
+
         (ffi:ftype-set-values! debug-messenger-create-info create-structure
                                [structure-type create-debug-messenger-structure-type]
                                [next-structure 0]
                                [flags 0]
                                [message-severity severity-mask]
                                [message-type type-mask]
-                               [callback callback]
+                               [callback callable-pointer]
                                [user-data 0])
-        (create-debug-messenger inst create-structure 0 messenger)
-        (values messenger callback)))))
+        (let ([result (create-debug-messenger inst create-structure 0 messenger)])
+          (values messenger callback result))))))
