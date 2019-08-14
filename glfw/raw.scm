@@ -35,12 +35,6 @@
   ;; Returns most recent error code and description fo an error.
   (define get-error-native (foreign-procedure "glfwGetError" ((* ffi:c-string)) int))
 
-  ;; Returns latest glfw error.
-  (define (get-error)
-    (ffi:with-pointer-to-c-string (lambda (description-ptr)
-                                    (let ([error-code (get-error-native description-ptr)])
-                                      (let ([strings (ffi:c-strings->scheme-strings description-ptr 1)])
-                                        (values error-code (car strings)))))))
 
   ;; Initialize GLFW, needs to be called before any other function.
   (define initialize (foreign-procedure "glfwInit" () boolean))
@@ -75,6 +69,13 @@
     (foreign-procedure "glfwGetRequiredInstanceExtensions"
                        (u32*)
                        (* ffi:c-string)))
+
+  ;; Returns latest glfw error.
+  (define (get-error)
+    (ffi:with-pointer-to-c-string (lambda (description-ptr)
+                                    (let ([error-code (get-error-native description-ptr)])
+                                      (let ([strings (ffi:c-strings->scheme-strings description-ptr 1)])
+                                        (values error-code (car strings)))))))
 
   ;;; Hints to use.
 

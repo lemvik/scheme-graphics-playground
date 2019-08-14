@@ -8,14 +8,14 @@
  (import (chezscheme)
          (prefix (glfw api) glfw:))
 
- (define (on-init window-ptr)
-   (format #t "~&Initializing window: ~a~%" window-ptr)
+ (define (on-init window)
+   (format #t "~&Initializing window: ~a~%" (glfw:window-description window))
    (format #t "~&Required Vulkan extensions: ~a~%" (glfw:query-required-extensions)))
 
- (define (on-destroy window-ptr)
-   (format #t "~&Closing window: ~a~%" window-ptr))
+ (define (on-destroy window)
+   (format #t "~&Closing window: ~a~%" (glfw:window-description window)))
 
- (define (on-frame window-ptr)
+ (define (on-frame window)
    #t)
 
  (glfw:with-window 800 600 "GLFW" on-init on-destroy on-frame))

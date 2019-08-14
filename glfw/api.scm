@@ -4,7 +4,13 @@
 
 (library (glfw api)
   (export set-error-callback
+
           with-window
+          window-width
+          window-height
+          window-title
+          window-description
+
           query-required-extensions)
 
   (import (chezscheme)
@@ -24,11 +30,26 @@
   ;; Initialize GLFW library.
   (define (initialize)
     (unless (glfw-raw:initialize)
-      (raide (glfw-error:make-glfw-error))))
+      (raise (glfw-error:make-glfw-error))))
 
   ;; Terminate GLFW library.
   (define (terminate)
     (glfw-raw:terminate))
+
+  ;; Scheme representation of GLFW window.
+  (define-record-type window
+    (nongenerative)
+    (fields (immutable width)
+            (immutable height)
+            (immutable title)
+            (immutable ptr)))
+
+  ;; Human-friendly window description.
+  (define (window-description win)
+    (format #f "GLFW window [title=~a][dimensions=(~ax~a)]"
+            (window-title win)
+            (window-width win)
+            (window-height win)))
 
   ;; Creates a glfw window and runs given functions in it.
   ;; on-init is run just before the main loop starts and is given window pointer.
@@ -36,13 +57,14 @@
   (define (with-window width height title on-init on-destroy frame-update)
     (initialize)
     (glfw-raw:window-hint glfw-raw:client-api-hint glfw-raw:no-api)
-    (let ([window-ptr (glfw-raw:create-window width height title 0 0)])
-      (on-init window-ptr)
-      (until (glfw-raw:window-should-close window-ptr)
+    (let* ([win-ptr (glfw-raw:create-window width height title 0 0)]
+           [win (make-window width height title win-ptr)])
+      (on-init win)
+      (until (glfw-raw:window-should-close win-ptr)
         (glfw-raw:poll-events)
-        (frame-update window-ptr))
-      (on-destroy window-ptr)
-      (glfw-raw:destroy-window window-ptr))
+        (frame-update win))
+      (on-destroy win)
+      (glfw-raw:destroy-window win-ptr))
     (terminate))
 
   ;; Returns a list of enabled instance extensions for Vulkan.
